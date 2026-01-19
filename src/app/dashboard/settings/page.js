@@ -1,36 +1,24 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "@/app/lib/axios";
 import toast from "react-hot-toast";
-import {
-  FaUser,
-  FaEnvelope,
-  FaPhoneAlt,
-  FaLock,
-  FaCamera,
-} from "react-icons/fa";
+import { FiEdit, FiUser, FiMail, FiPhone, FiCalendar } from "react-icons/fi";
 import AuthGuard from "@/app/lib/authGuard";
 import Layout from "@/app/components/common/layout";
 
 const Settings = () => {
   const [user, setUser] = useState(null);
-  const [form, setForm] = useState({});
   const [loading, setLoading] = useState(true);
-  const fileInputRef = useRef(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const id = localStorage.getItem("id");
         const res = await axios.get(`/user/${id}`);
-        setUser(res.data);
-        setForm({
-          username: res.data.username,
-          email: res.data.email,
-          phone: res.data.phone || "",
-          password: "",
-          profileImage: res.data.profileImage,
-        });
+        // Handle response structure: { success: true, data: {...} }
+        setUser(res.data?.data || res.data);
       } catch (err) {
         toast.error("Failed to load profile");
       } finally {
@@ -41,131 +29,152 @@ const Settings = () => {
     fetchProfile();
   }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files[0]) {
-      setForm({ ...form, profileImageFile: e.target.files[0] });
+  const getImageUrl = (path) => {
+    // Check localStorage for uploaded images first
+    if (typeof window !== "undefined" && path) {
+      const uploads = localStorage.getItem("uploads");
+      if (uploads) {
+        try {
+          const uploadsData = JSON.parse(uploads);
+          // Check if path exists as a key in localStorage
+          if (uploadsData[path]) {
+            return uploadsData[path];
+          }
+          // Also check all keys to find matching image
+          const keys = Object.keys(uploadsData);
+          for (const key of keys) {
+            if (key.includes(path) || path.includes(key)) {
+              return uploadsData[key];
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing localStorage uploads:", e);
+        }
+      }
     }
+    // Fallback to server path
+    if (path?.startsWith("/uploads")) {
+      return `${process.env.NEXT_PUBLIC_BASE_URL}${path}`;
+    }
+    return path || "/default-avatar.png";
   };
 
-  const handleUpdate = async () => {
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "—";
     try {
-      const id = localStorage.getItem("id");
-      const formData = new FormData();
-      formData.append("username", form.username);
-      formData.append("phone", form.phone);
-      if (form.password) formData.append("password", form.password);
-      if (form.profileImageFile)
-        formData.append("profileImage", form.profileImageFile);
-
-      const res = await axios.put(`/user/${id}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
-
-      setUser(res.data);
-      toast.success("Profile updated successfully!");
-    } catch (err) {
-      toast.error("Update failed");
+    } catch (e) {
+      return dateStr;
     }
   };
-
-  const getImageUrl = (path) =>
-    path?.startsWith("/uploads") ? `${process.env.NEXT_PUBLIC_BASE_URL}${path}` : path;
 
   if (loading) return <p className="text-gray-400">Loading profile...</p>;
 
   return (
-    <>
-      <AuthGuard>
-        <Layout>
-          <div className="max-w-2xl mx-auto bg-gray-900 text-white p-6 rounded-xl shadow border border-gray-800">
-            <h2 className="text-2xl font-bold text-cyan-400 mb-6">
-              My Profile
-            </h2>
-
-            <div className="flex items-center gap-4 mb-6">
-              <div className="relative">
-                <img
-                  src={
-                    form.profileImageFile
-                      ? URL.createObjectURL(form.profileImageFile)
-                      : getImageUrl(form.profileImage)
-                  }
-                  alt="avatar"
-                  className="w-20 h-20 rounded-full object-cover border border-gray-700"
-                />
-                <button
-                  onClick={() => fileInputRef.current.click()}
-                  className="absolute bottom-0 right-0 bg-cyan-500 p-2 rounded-full hover:bg-cyan-600"
-                  title="Change photo"
-                >
-                  <FaCamera />
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*"
-                  className="hidden"
-                />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold">{form.username}</h3>
-                <p className="text-sm text-gray-400">{form.email}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  name="username"
-                  value={form.username}
-                  onChange={handleChange}
-                  placeholder="Username"
-                  className="w-full bg-gray-800 rounded px-4 py-3 pl-10 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                />
-                <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              </div>
-
-              <div className="relative">
-                <input
-                  type="text"
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  placeholder="Phone"
-                  className="w-full bg-gray-800 rounded px-4 py-3 pl-10 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                />
-                <FaPhoneAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              </div>
-
-              <div className="relative">
-                <input
-                  type="password"
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="New Password"
-                  className="w-full bg-gray-800 rounded px-4 py-3 pl-10 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                />
-                <FaLock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-              </div>
-
-              <button
-                onClick={handleUpdate}
-                className="w-full py-3 mt-4 rounded bg-gradient-to-r from-cyan-400 to-blue-500 text-gray-900 font-bold hover:scale-[1.02] transition"
-              >
-                Update Profile
-              </button>
-            </div>
+    <AuthGuard>
+      <Layout>
+        <div className="w-full bg-gray-900 text-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg border border-gray-800">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-cyan-400">My Profile</h2>
+            <button
+              onClick={() => router.push("/dashboard/settings/update")}
+              className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white px-4 sm:px-6 py-2 rounded-lg transition text-sm sm:text-base w-full sm:w-auto justify-center"
+            >
+              <FiEdit /> Update Profile
+            </button>
           </div>
-        </Layout>
-      </AuthGuard>
-    </>
+
+          {user && (
+            <div className="space-y-6">
+              {/* Profile Image */}
+              <div className="flex justify-start mb-6 sm:mb-8">
+                <div className="relative">
+                  <img
+                    src={getImageUrl(user.profileImage)}
+                    alt="Profile"
+                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-cyan-500 shadow-lg"
+                  />
+                </div>
+              </div>
+
+              {/* Profile Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {/* First Name */}
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FiUser className="text-cyan-400 flex-shrink-0" />
+                    <label className="text-sm text-gray-400">First Name</label>
+                  </div>
+                  <p className="text-base sm:text-lg font-semibold break-words min-w-0">
+                    {user.firstName || user.first_name || "—"}
+                  </p>
+                </div>
+
+                {/* Last Name */}
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FiUser className="text-cyan-400 flex-shrink-0" />
+                    <label className="text-sm text-gray-400">Last Name</label>
+                  </div>
+                  <p className="text-base sm:text-lg font-semibold break-words min-w-0">
+                    {user.lastName || user.last_name || "—"}
+                  </p>
+                </div>
+
+                {/* Date of Birth */}
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FiCalendar className="text-cyan-400 flex-shrink-0" />
+                    <label className="text-sm text-gray-400">Date of Birth</label>
+                  </div>
+                  <p className="text-base sm:text-lg font-semibold break-words min-w-0">
+                    {formatDate(user.dateOfBirth || user.date_of_birth)}
+                  </p>
+                </div>
+
+                {/* Phone */}
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FiPhone className="text-cyan-400 flex-shrink-0" />
+                    <label className="text-sm text-gray-400">Phone</label>
+                  </div>
+                  <p className="text-base sm:text-lg font-semibold break-words min-w-0">
+                    {user.phone || "—"}
+                  </p>
+                </div>
+
+                {/* Username */}
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FiUser className="text-cyan-400 flex-shrink-0" />
+                    <label className="text-sm text-gray-400">Username</label>
+                  </div>
+                  <p className="text-base sm:text-lg font-semibold break-words min-w-0">
+                    {user.username || "—"}
+                  </p>
+                </div>
+
+                {/* Email */}
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 md:col-span-2">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FiMail className="text-cyan-400 flex-shrink-0" />
+                    <label className="text-sm text-gray-400">Email</label>
+                  </div>
+                  <p className="text-base sm:text-lg font-semibold break-all min-w-0">
+                    {user.email || "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Layout>
+    </AuthGuard>
   );
 };
 
