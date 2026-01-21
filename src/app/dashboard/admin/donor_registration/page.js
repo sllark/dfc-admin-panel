@@ -20,12 +20,44 @@ export default function DonorRegistrations() {
 
   const fetchDonors = async () => {
     try {
-      const res = await axios.get("/donors/donor-registrations");
-      // Handle different response structures
-      const donorsData = res.data?.data || res.data || [];
-      setDonors(Array.isArray(donorsData) ? donorsData : []);
-      setFilteredDonors(Array.isArray(donorsData) ? donorsData : []);
+      let allDonors = [];
+      let currentPage = 1;
+      let lastPage = 1;
+      let hasMorePages = true;
+
+      // Fetch all pages to get all donors
+      while (hasMorePages) {
+        const res = await axios.get("/donors/donor-registrations", {
+          params: { page: currentPage }
+        });
+
+        // Handle response structure
+        const responseData = res.data?.data || res.data || [];
+        const meta = res.data?.meta || {};
+
+        // Extract donors from current page
+        let pageDonors = [];
+        if (Array.isArray(responseData)) {
+          pageDonors = responseData;
+        } else if (typeof responseData === 'object') {
+          pageDonors = responseData.donors || responseData.registrations || responseData.items || [];
+        }
+
+        // Add to all donors array
+        allDonors = [...allDonors, ...pageDonors];
+
+        // Check if there are more pages
+        lastPage = meta.last_page || meta.totalPages || 1;
+        hasMorePages = currentPage < lastPage;
+        currentPage++;
+      }
+
+      console.log(`Fetched ${allDonors.length} total donors from ${lastPage} page(s)`); // Debug log
+
+      setDonors(allDonors);
+      setFilteredDonors(allDonors);
     } catch (err) {
+      console.error("Fetch donors error:", err);
       toast.error("Failed to fetch donors");
       setDonors([]);
       setFilteredDonors([]);
@@ -56,11 +88,19 @@ export default function DonorRegistrations() {
     setCurrentPage(1);
   }, [search, statusFilter, donors]);
 
-  const totalPages = Math.ceil(filteredDonors.length / itemsPerPage);
-  const paginatedDonors = filteredDonors.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Calculate pagination
+  const totalDonors = filteredDonors.length;
+  const totalPages = Math.max(1, Math.ceil(totalDonors / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDonors = filteredDonors.slice(startIndex, endIndex);
+
+  // Reset to page 1 if current page is beyond total pages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   const handleEdit = (donor) => {
     setEditingDonor(donor);
@@ -258,37 +298,45 @@ export default function DonorRegistrations() {
           </div>
 
           {/* Pagination */}
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div>
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className={`px-4 py-2 rounded border ${
-                  currentPage === 1
-                    ? "text-gray-400 cursor-not-allowed border-gray-600"
-                    : "hover:bg-gray-700 border-gray-600"
-                }`}
-              >
-                Prev
-              </button>
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages}
-                className={`px-4 py-2 ml-2 rounded border ${
-                  currentPage === totalPages
-                    ? "text-gray-400 cursor-not-allowed border-gray-600"
-                    : "hover:bg-gray-700 border-gray-600"
-                }`}
-              >
-                Next
-              </button>
+          {totalDonors > 0 && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || totalPages === 0}
+                  className={`px-4 py-2 rounded border transition ${
+                    currentPage === 1 || totalPages === 0
+                      ? "text-gray-400 cursor-not-allowed border-gray-600 bg-gray-800"
+                      : "text-white hover:bg-gray-700 border-gray-600 bg-gray-800"
+                  }`}
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className={`px-4 py-2 rounded border transition ${
+                    currentPage === totalPages || totalPages === 0
+                      ? "text-gray-400 cursor-not-allowed border-gray-600 bg-gray-800"
+                      : "text-white hover:bg-gray-700 border-gray-600 bg-gray-800"
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+              <div className="flex flex-col sm:flex-row items-center gap-2 text-sm text-gray-400">
+                <span>
+                  Showing {startIndex + 1} to {Math.min(endIndex, totalDonors)} of {totalDonors} donors
+                </span>
+                <span className="hidden sm:inline">•</span>
+                <span>
+                  Page {currentPage} of {totalPages}
+                </span>
+              </div>
             </div>
-            <span className="text-sm text-gray-400">
-              Page {currentPage} of {totalPages}
-            </span>
-          </div>
+          )}
 
           {/* Add/Edit Modal */}
           <DonorModal
