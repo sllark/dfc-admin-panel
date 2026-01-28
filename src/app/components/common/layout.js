@@ -11,7 +11,7 @@ const Layout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gray-950 text-white">
       <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-16'}`}>
         <Topbar />
         <main className="p-6">{children}</main>
       </div>

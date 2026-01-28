@@ -24,7 +24,7 @@ const sidebarMenu = [
     href: '#',
     children: [
       { label: 'Services', href: '/dashboard/admin/services' },
-      { label: 'Registered Doner', href: '/dashboard/admin/donor_registration' },
+      { label: 'Registered Donor', href: '/dashboard/admin/donor_registration' },
       { label: 'Payments', href: '/dashboard/admin/payments' },
       { label: 'Users', href: '/dashboard/admin/users' },
     ],
@@ -52,12 +52,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
   return (
     <aside
-      className={`bg-gray-900 text-white h-screen transition-all duration-300 ${
+      className={`bg-gray-900 text-white h-screen fixed left-0 top-0 transition-all duration-300 ${
         isOpen ? 'w-64' : 'w-16'
-      } flex flex-col`}
+      } flex flex-col z-40`}
     >
       {/* Top Section */}
-      <div className="flex items-center justify-between p-4">
+      <div className="flex items-center justify-between p-4 flex-shrink-0">
         <button onClick={toggleSidebar}>
           <FaBars className="text-white text-xl" />
         </button>

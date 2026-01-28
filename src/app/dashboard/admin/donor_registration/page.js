@@ -7,6 +7,13 @@ import AuthGuard from "@/app/lib/authGuard";
 import Layout from "@/app/components/common/layout";
 import DonorModal from "./DonorModal";
 import { FiEdit, FiTrash2, FiCheck, FiX } from "react-icons/fi";
+import Pagination from "@/app/components/ui/Pagination";
+import StatusBadge from "@/app/components/ui/StatusBadge";
+import SearchInput from "@/app/components/ui/SearchInput";
+import FilterSelect from "@/app/components/ui/FilterSelect";
+import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
+import DetailsModal from "@/app/components/ui/DetailsModal";
+import { formatSimpleDate, formatDate } from "@/app/utils/dateUtils";
 
 export default function DonorRegistrations() {
   const [donors, setDonors] = useState([]);
@@ -16,6 +23,7 @@ export default function DonorRegistrations() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingDonor, setEditingDonor] = useState(null);
+  const [selectedDonor, setSelectedDonor] = useState(null);
   const itemsPerPage = 10;
 
   const fetchDonors = async () => {
@@ -163,24 +171,23 @@ export default function DonorRegistrations() {
 
           {/* Filters */}
           <div className="flex flex-col md:flex-row gap-3 mb-6">
-            <input
-              type="text"
-              placeholder="Search by name or panel ID..."
+            <SearchInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 border border-gray-700 rounded px-4 py-2 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1"
             />
-            <select
+            <FilterSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full md:w-64 border border-gray-700 rounded px-4 py-2 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="REJECTED">Rejected</option>
-              <option value="RESUBMITTED">Resubmitted</option>
-            </select>
+              placeholder="Status"
+              options={[
+                { value: 'PENDING', label: 'Pending' },
+                { value: 'CONFIRMED', label: 'Confirmed' },
+                { value: 'REJECTED', label: 'Rejected' },
+                { value: 'RESUBMITTED', label: 'Resubmitted' },
+              ]}
+              className="w-full md:w-64"
+            />
           </div>
 
           {/* Table */}
@@ -217,7 +224,8 @@ export default function DonorRegistrations() {
                 {paginatedDonors.map((d) => (
                   <tr
                     key={d.id}
-                    className="hover:bg-gray-700 border-b border-gray-600"
+                    className="hover:bg-gray-700 border-b border-gray-600 cursor-pointer"
+                    onClick={() => setSelectedDonor(d)}
                   >
                     <td className="px-4 py-2">{d.id}</td>
                     <td className="px-4 py-2">
@@ -231,37 +239,15 @@ export default function DonorRegistrations() {
                     </td>
 
                     <td className="px-4 py-2">
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          d.paymentStatus === "Paid"
-                            ? "bg-green-600 text-green-100"
-                            : "bg-gray-600 text-gray-200"
-                        }`}
-                      >
-                        {d.paymentStatus}
-                      </span>
+                      <StatusBadge status={d.paymentStatus} />
                     </td>
                     <td className="px-4 py-2">
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          d.status === "CONFIRMED"
-                            ? "bg-green-600 text-green-100"
-                            : d.status === "REJECTED"
-                            ? "bg-red-600 text-red-100"
-                            : d.status === "RESUBMITTED"
-                            ? "bg-yellow-600 text-yellow-100"
-                            : "bg-gray-600 text-gray-200"
-                        }`}
-                      >
-                        {d.status}
-                      </span>
+                      <StatusBadge status={d.status} />
                     </td>
                     <td className="px-4 py-2">
-                      {new Date(
-                        d.registrationExpirationDate
-                      ).toLocaleDateString()}
+                      {formatSimpleDate(d.registrationExpirationDate)}
                     </td>
-                    <td className="px-4 py-2 flex flex-wrap gap-2">
+                    <td className="px-4 py-2 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleEdit(d)}
                         className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded flex items-center gap-1"
@@ -299,43 +285,14 @@ export default function DonorRegistrations() {
 
           {/* Pagination */}
           {totalDonors > 0 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1 || totalPages === 0}
-                  className={`px-4 py-2 rounded border transition ${
-                    currentPage === 1 || totalPages === 0
-                      ? "text-gray-400 cursor-not-allowed border-gray-600 bg-gray-800"
-                      : "text-white hover:bg-gray-700 border-gray-600 bg-gray-800"
-                  }`}
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  className={`px-4 py-2 rounded border transition ${
-                    currentPage === totalPages || totalPages === 0
-                      ? "text-gray-400 cursor-not-allowed border-gray-600 bg-gray-800"
-                      : "text-white hover:bg-gray-700 border-gray-600 bg-gray-800"
-                  }`}
-                >
-                  Next
-                </button>
-              </div>
-              <div className="flex flex-col sm:flex-row items-center gap-2 text-sm text-gray-400">
-                <span>
-                  Showing {startIndex + 1} to {Math.min(endIndex, totalDonors)} of {totalDonors} donors
-                </span>
-                <span className="hidden sm:inline">•</span>
-                <span>
-                  Page {currentPage} of {totalPages}
-                </span>
-              </div>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={totalDonors}
+              itemsPerPage={itemsPerPage}
+              itemLabel="donors"
+            />
           )}
 
           {/* Add/Edit Modal */}
@@ -347,6 +304,31 @@ export default function DonorRegistrations() {
             }}
             donor={editingDonor}
             onSaved={fetchDonors}
+          />
+
+          {/* Details Modal */}
+          <DetailsModal
+            isOpen={!!selectedDonor}
+            onClose={() => setSelectedDonor(null)}
+            title="Donor Registration Details"
+            data={selectedDonor}
+            fields={selectedDonor ? [
+              { key: 'id', label: 'ID' },
+              { key: 'donorNameFirst', label: 'First Name' },
+              { key: 'donorNameLast', label: 'Last Name' },
+              { key: 'donorEmail', label: 'Email' },
+              { key: 'donorStateOfResidence', label: 'State of Residence' },
+              { key: 'donorSSN', label: 'SSN' },
+              { key: 'donorDateOfBirth', label: 'Date of Birth', format: (val) => formatSimpleDate(val) },
+              { key: 'panelId', label: 'Panel ID' },
+              { key: 'reasonForTest', label: 'Reason for Test' },
+              { key: 'registrationExpirationDate', label: 'Registration Expiration Date', format: (val) => formatSimpleDate(val) },
+              { key: 'labcorpRegistrationNumber', label: 'LabCorp Registration Number' },
+              { key: 'paymentStatus', label: 'Payment Status', component: (val) => <StatusBadge status={val} /> },
+              { key: 'status', label: 'Status', component: (val) => <StatusBadge status={val} /> },
+              { key: 'createdAt', label: 'Created At', format: (val) => formatDate(val) },
+              { key: 'updatedAt', label: 'Updated At', format: (val) => formatDate(val) },
+            ] : []}
           />
         </div>
       </Layout>

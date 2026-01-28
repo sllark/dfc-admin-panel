@@ -4,8 +4,16 @@ import React, { useState, useEffect } from "react";
 import AuthGuard from "@/app/lib/authGuard";
 import axios from "@/app/lib/axios";
 import toast from "react-hot-toast";
-import { FiEdit, FiTrash2, FiPlus, FiSearch } from "react-icons/fi";
+import { FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
 import Layout from "@/app/components/common/layout";
+import Pagination from "@/app/components/ui/Pagination";
+import SearchInput from "@/app/components/ui/SearchInput";
+import FilterSelect from "@/app/components/ui/FilterSelect";
+import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
+import DetailsModal from "@/app/components/ui/DetailsModal";
+import StatusBadge from "@/app/components/ui/StatusBadge";
+import { getImageUrl } from "@/app/utils/imageUtils";
+import { formatDate } from "@/app/utils/dateUtils";
 
 const Services = () => {
   const [services, setServices] = useState([]);
@@ -25,14 +33,12 @@ const Services = () => {
   const [statusFilter, setStatusFilter] = useState(""); // "" = all, "true" = active, "false" = inactive
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [selectedService, setSelectedService] = useState(null);
 
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  const getImageUrl = (path) =>
-    path?.startsWith("/uploads")
-      ? `${process.env.NEXT_PUBLIC_BASE_URL}${path}`
-      : path;
 
   const fetchServices = async (
     pageNumber = 1,
@@ -47,6 +53,7 @@ const Services = () => {
       });
       setServices(res.data.data);
       setTotalPages(res.data.meta?.last_page || 1);
+      setTotalItems(res.data.meta?.total || res.data.data?.length || 0);
     } catch (error) {
       console.error(error);
       toast.error("Failed to fetch services");
@@ -195,25 +202,20 @@ const Services = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-3xl font-semibold text-white">Services</h1>
           <div className="flex gap-4 flex-wrap">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search by name or slug..."
-                value={search}
-                onChange={handleSearchChange}
-                className="pl-10 pr-3 py-2 rounded-md bg-gray-800 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <FiSearch className="absolute left-3 top-2.5 text-gray-400" />
-            </div>
-            <select
+            <SearchInput
+              value={search}
+              onChange={handleSearchChange}
+              className="flex-1 min-w-[200px]"
+            />
+            <FilterSelect
               value={statusFilter}
               onChange={handleStatusFilterChange}
-              className="bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
+              placeholder="Status"
+              options={[
+                { value: 'true', label: 'Active' },
+                { value: 'false', label: 'Inactive' },
+              ]}
+            />
             <button
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
               onClick={() => openModal()}
@@ -224,7 +226,7 @@ const Services = () => {
         </div>
 
         {loading ? (
-          <p className="text-gray-400">Loading...</p>
+          <LoadingSpinner message="Loading services..." />
         ) : (
           <div className="overflow-x-auto rounded-lg border border-gray-700">
             <table className="min-w-full text-sm text-left text-white">
@@ -250,7 +252,7 @@ const Services = () => {
                   </tr>
                 ) : (
                   services.map((s) => (
-                    <tr key={s.id} className="hover:bg-gray-800 transition">
+                    <tr key={s.id} className="hover:bg-gray-800 transition cursor-pointer" onClick={() => setSelectedService(s)}>
                       <td className="py-3 px-4">{s.id}</td>
                       <td className="py-3 px-4">{s.name}</td>
                       <td className="py-3 px-4">{s.slug}</td>
@@ -280,7 +282,7 @@ const Services = () => {
                           <span className="text-gray-500 italic">No image</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 flex gap-3">
+                      <td className="py-3 px-4 flex gap-3" onClick={(e) => e.stopPropagation()}>
                         <button
                           className="text-blue-400 hover:text-blue-600"
                           onClick={() => openModal(s)}
@@ -302,27 +304,50 @@ const Services = () => {
               </tbody>
             </table>
 
-            <div className="flex justify-between items-center p-4 text-white">
-              <button
-                className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
-                disabled={page === 1}
-                onClick={() => handlePageChange(page - 1)}
-              >
-                Previous
-              </button>
-              <span>
-                Page {page} of {totalPages}
-              </span>
-              <button
-                className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
-                disabled={page === totalPages}
-                onClick={() => handlePageChange(page + 1)}
-              >
-                Next
-              </button>
-            </div>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              totalItems={totalItems}
+              itemsPerPage={10}
+              itemLabel="services"
+            />
           </div>
         )}
+
+        {/* Details Modal */}
+        <DetailsModal
+          isOpen={!!selectedService}
+          onClose={() => setSelectedService(null)}
+          title="Service Details"
+          data={selectedService}
+          fields={selectedService ? [
+            { key: 'id', label: 'Service ID' },
+            { key: 'name', label: 'Service Name' },
+            { key: 'slug', label: 'Slug' },
+            { key: 'serviceFee', label: 'Service Fee', format: (val) => `$${val}` },
+            { key: 'accountNo', label: 'Account Number' },
+            { key: 'panelID', label: 'Panel ID' },
+            { 
+              key: 'status', 
+              label: 'Status', 
+              component: (val) => val ? <StatusBadge status="ACTIVE" /> : <StatusBadge status="INACTIVE" />
+            },
+            { 
+              key: 'bannerImage', 
+              label: 'Banner Image', 
+              component: (val) => val ? (
+                <img
+                  src={getImageUrl(val)}
+                  alt="Banner"
+                  className="w-32 h-32 rounded-full object-cover"
+                />
+              ) : <span className="text-gray-500 italic">No image</span>
+            },
+            { key: 'createdAt', label: 'Created At', format: (val) => formatDate(val) },
+            { key: 'updatedAt', label: 'Updated At', format: (val) => formatDate(val) },
+          ] : []}
+        />
 
         {showModal && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">

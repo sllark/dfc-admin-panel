@@ -30,7 +30,7 @@ const Topbar = () => {
   };
 
   return (
-    <header className="bg-gray-800 text-white px-6 py-4 flex justify-between items-center">
+    <header className="bg-gray-800 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-30">
       <h1 className="text-lg font-semibold">
         Welcome <Link href="/dashboard/settings" className="text-cyan-400 hover:underline">{localStorage.getItem("username") || "User"}</Link>
       </h1>
