@@ -108,23 +108,23 @@ const Settings = () => {
                 <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
                   <div className="flex items-center gap-3 mb-2">
                     <FiUser className="text-cyan-400 flex-shrink-0" />
-                    <label className="text-sm text-gray-400">First Name</label>
+                    <label className="text-sm text-gray-400">Full Name</label>
                   </div>
                   <p className="text-base sm:text-lg font-semibold break-words min-w-0">
-                    {user.firstName || user.first_name || "—"}
+                    {user.firstName+ ` ${user.lastName}` || user.first_name+ ` ${user.last_name}` || "—"}
                   </p>
                 </div>
 
-                {/* Last Name */}
-                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                  <div className="flex items-center gap-3 mb-2">
-                    <FiUser className="text-cyan-400 flex-shrink-0" />
-                    <label className="text-sm text-gray-400">Last Name</label>
+                  {/* Username */}
+                  <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                      <div className="flex items-center gap-3 mb-2">
+                          <FiUser className="text-cyan-400 flex-shrink-0" />
+                          <label className="text-sm text-gray-400">Username</label>
+                      </div>
+                      <p className="text-base sm:text-lg font-semibold break-words min-w-0">
+                          {user.username || "—"}
+                      </p>
                   </div>
-                  <p className="text-base sm:text-lg font-semibold break-words min-w-0">
-                    {user.lastName || user.last_name || "—"}
-                  </p>
-                </div>
 
                 {/* Date of Birth */}
                 <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
@@ -145,17 +145,6 @@ const Settings = () => {
                   </div>
                   <p className="text-base sm:text-lg font-semibold break-words min-w-0">
                     {user.phone || "—"}
-                  </p>
-                </div>
-
-                {/* Username */}
-                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                  <div className="flex items-center gap-3 mb-2">
-                    <FiUser className="text-cyan-400 flex-shrink-0" />
-                    <label className="text-sm text-gray-400">Username</label>
-                  </div>
-                  <p className="text-base sm:text-lg font-semibold break-words min-w-0">
-                    {user.username || "—"}
                   </p>
                 </div>
 
