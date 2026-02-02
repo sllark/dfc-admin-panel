@@ -13,7 +13,7 @@ export async function OPTIONS() {
 
 export async function PUT(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -57,7 +57,7 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
     if (backendUrl) {

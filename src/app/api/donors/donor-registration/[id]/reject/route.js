@@ -13,7 +13,7 @@ export async function OPTIONS() {
 
 export async function POST(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
