@@ -43,13 +43,3 @@ export const getImageUrl = (path, options = {}) => {
 
   return path || options.default || "/default-avatar.png";
 };
-
-/**
- * Get image URL from file object (for preview)
- * @param {File} file - File object
- * @returns {string} Object URL for the file
- */
-export const getImageUrlFromFile = (file) => {
-  if (!file) return null;
-  return URL.createObjectURL(file);
-};

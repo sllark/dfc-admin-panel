@@ -26,26 +26,6 @@ export const formatDate = (dateStr, options = {}) => {
 };
 
 /**
- * Format a date to date-only format (no time)
- * @param {string} dateStr - Date string to format
- * @returns {string} Formatted date string
- */
-export const formatDateOnly = (dateStr) => {
-  if (!dateStr) return "—";
-  
-  try {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch (e) {
-    return dateStr;
-  }
-};
-
-/**
  * Format a date to a simple date format
  * @param {string} dateStr - Date string to format
  * @returns {string} Formatted date string

@@ -1,4 +1,3 @@
-// app/(your-path)/DonorModal.jsx
 "use client";
 
 import DonorForm from "./DonorForm";
