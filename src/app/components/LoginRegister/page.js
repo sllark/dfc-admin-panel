@@ -26,6 +26,26 @@ const LoginRegister = () => {
         setLoading(true);
         
         try {
+            // Basic client-side validation to avoid 400s from the API
+            if (isRegister) {
+                if (
+                    !form.username.trim() ||
+                    !form.email.trim() ||
+                    !form.password.trim() ||
+                    !form.phone.trim()
+                ) {
+                    toast.error("Please fill in all registration fields.");
+                    setLoading(false);
+                    return;
+                }
+            } else {
+                if (!form.email.trim() || !form.password.trim()) {
+                    toast.error("Please enter both email and password.");
+                    setLoading(false);
+                    return;
+                }
+            }
+
             if (isRegister) {
                 // Registration flow
                 const res = await axios.post("/auth/register", {

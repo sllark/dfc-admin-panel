@@ -16,10 +16,17 @@ export async function POST(request) {
     const body = await request.json();
     const { username, email, password, phone } = body;
 
-    // Validate required fields
-    if (!username || !email || !password || !phone) {
+    // Validate required fields with clearer error messages
+    const missingFields = [];
+    if (!username || !String(username).trim()) missingFields.push('username');
+    if (!email || !String(email).trim()) missingFields.push('email');
+    if (!password || !String(password).trim()) missingFields.push('password');
+    if (!phone || !String(phone).trim()) missingFields.push('phone');
+
+    if (missingFields.length > 0) {
+      console.warn('Register validation failed. Missing fields:', missingFields, 'Body:', body);
       return NextResponse.json(
-        { message: 'All fields are required' },
+        { message: `All fields are required. Missing: ${missingFields.join(', ')}` },
         { status: 400, headers: corsHeaders }
       );
     }

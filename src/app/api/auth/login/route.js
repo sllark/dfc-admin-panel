@@ -16,10 +16,15 @@ export async function POST(request) {
     const body = await request.json();
     const { email, password } = body;
 
-    // Validate required fields
-    if (!email || !password) {
+    // Validate required fields with clearer error messages
+    const missingFields = [];
+    if (!email || !String(email).trim()) missingFields.push('email');
+    if (!password || !String(password).trim()) missingFields.push('password');
+
+    if (missingFields.length > 0) {
+      console.warn('Login validation failed. Missing fields:', missingFields, 'Body:', body);
       return NextResponse.json(
-        { message: 'Email and password are required' },
+        { message: `Email and password are required. Missing: ${missingFields.join(', ')}` },
         { status: 400, headers: corsHeaders }
       );
     }
