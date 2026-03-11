@@ -157,10 +157,10 @@ export default function DonorRegistrations() {
   return (
     <AuthGuard>
       <Layout>
-        <div className="p-6 max-w-7xl mx-auto bg-gray-900 min-h-screen text-gray-200 rounded-lg">
+        <div className="space-y-6">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-            <h1 className="text-2xl font-semibold">Donor Registrations</h1>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 className="text-2xl font-semibold text-white">Donor Registrations</h1>
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded shadow transition"
@@ -170,7 +170,7 @@ export default function DonorRegistrations() {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-3 mb-6">
+          <div className="flex flex-col md:flex-row gap-3">
             <SearchInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}

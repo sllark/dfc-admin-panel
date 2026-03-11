@@ -163,9 +163,9 @@ const AdminPayments = () => {
   return (
     <AuthGuard>
       <Layout>
-        <div className="p-6 bg-gray-900 min-h-screen text-gray-100">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Admin Payments</h1>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-white">Admin Payments</h1>
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
@@ -175,7 +175,7 @@ const AdminPayments = () => {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-3 mb-6">
+          <div className="flex flex-col md:flex-row gap-3">
             <SearchInput
               value={search}
               onChange={(e) => setSearch(e.target.value)}
