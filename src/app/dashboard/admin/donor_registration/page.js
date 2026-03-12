@@ -15,6 +15,8 @@ import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
 import DetailsModal from "@/app/components/ui/DetailsModal";
 import { formatSimpleDate, formatDate } from "@/app/utils/dateUtils";
 
+const DEFAULT_ACCOUNT_NUMBER = "09456155";
+
 export default function DonorRegistrations() {
   const [donors, setDonors] = useState([]);
   const [filteredDonors, setFilteredDonors] = useState([]);
@@ -126,17 +128,46 @@ export default function DonorRegistrations() {
     }
   };
 
-  const handleConfirm = async (id) => {
-    const labcorpNumber = prompt("Enter LabCorp Registration Number:");
-    if (!labcorpNumber) return;
+  const handleConfirm = async (donor) => {
     try {
-      await axios.post(`/api/donors/donor-registration/${id}/confirm`, {
-        labcorpRegistrationNumber: labcorpNumber,
-      });
-      toast.success("Donor confirmed successfully");
+      const payload = {
+        donorNameFirst: donor.donorNameFirst,
+        donorNameLast: donor.donorNameLast,
+        donorSex: donor.donorSex,
+        donorDateOfBirth: donor.donorDateOfBirth,
+        donorSSN: donor.donorSSN,
+        donorStateOfResidence: donor.donorStateOfResidence,
+        panelId: donor.panelId,
+        accountNumber: donor.accountNumber || DEFAULT_ACCOUNT_NUMBER,
+        testingAuthority: donor.testingAuthority,
+        registrationExpirationDate: donor.registrationExpirationDate,
+        donorReasonForTest: donor.donorReasonForTest || donor.reasonForTest,
+        splitSpecimenRequested: true,
+      };
+
+      const res = await axios.post(
+        "/donors/donor-registration/confirm-direct",
+        payload
+      );
+
+      const data = res.data || {};
+
+      if (!data.success) {
+        throw new Error(data.message || "Failed to confirm donor registration");
+      }
+
+      toast.success(
+        data.labcorpRegistrationNumber
+          ? `Donor confirmed. LabCorp Reg#: ${data.labcorpRegistrationNumber}`
+          : "Donor confirmed successfully"
+      );
       fetchDonors();
     } catch (err) {
-      toast.error("Failed to confirm donor");
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to confirm donor";
+      toast.error(message);
     }
   };
 
@@ -263,7 +294,7 @@ export default function DonorRegistrations() {
                         <FiTrash2 />
                       </button>
                       <button
-                        onClick={() => handleConfirm(d.id)}
+                        onClick={() => handleConfirm(d)}
                         className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded flex items-center gap-1"
                         title="Confirm"
                       >
