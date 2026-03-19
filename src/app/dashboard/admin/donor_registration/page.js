@@ -23,49 +23,35 @@ export default function DonorRegistrations() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalDonors, setTotalDonors] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingDonor, setEditingDonor] = useState(null);
   const [selectedDonor, setSelectedDonor] = useState(null);
   const itemsPerPage = 10;
 
-  const fetchDonors = async () => {
+  const fetchDonors = async (page = 1, overrides = {}) => {
     try {
-      let allDonors = [];
-      let currentPage = 1;
-      let lastPage = 1;
-      let hasMorePages = true;
+      const effectiveSearch = overrides.search ?? search;
+      const effectiveStatus = overrides.status ?? statusFilter;
 
-      // Fetch all pages to get all donors
-      while (hasMorePages) {
-        const res = await axios.get("/donors/donor-registrations", {
-          params: { page: currentPage }
-        });
+      const res = await axios.get("/donors/donor-registrations", {
+        params: {
+          page,
+          perPage: itemsPerPage,
+          search: effectiveSearch || undefined,
+          status: effectiveStatus || undefined,
+        },
+      });
 
-        // Handle response structure
-        const responseData = res.data?.data || res.data || [];
-        const meta = res.data?.meta || {};
+      const responseData = res.data?.data || [];
+      const meta = res.data?.meta || {};
 
-        // Extract donors from current page
-        let pageDonors = [];
-        if (Array.isArray(responseData)) {
-          pageDonors = responseData;
-        } else if (typeof responseData === 'object') {
-          pageDonors = responseData.donors || responseData.registrations || responseData.items || [];
-        }
-
-        // Add to all donors array
-        allDonors = [...allDonors, ...pageDonors];
-
-        // Check if there are more pages
-        lastPage = meta.last_page || meta.totalPages || 1;
-        hasMorePages = currentPage < lastPage;
-        currentPage++;
-      }
-
-      console.log(`Fetched ${allDonors.length} total donors from ${lastPage} page(s)`); // Debug log
-
-      setDonors(allDonors);
-      setFilteredDonors(allDonors);
+      setDonors(responseData);
+      setFilteredDonors(responseData);
+      setTotalDonors(meta.total || responseData.length || 0);
+      setTotalPages(meta.last_page || meta.totalPages || 1);
+      setCurrentPage(meta.current_page || page || 1);
     } catch (err) {
       console.error("Fetch donors error:", err);
       toast.error("Failed to fetch donors");
@@ -75,7 +61,7 @@ export default function DonorRegistrations() {
   };
 
   useEffect(() => {
-    fetchDonors();
+    fetchDonors(1);
   }, []);
 
   useEffect(() => {
@@ -99,18 +85,17 @@ export default function DonorRegistrations() {
   }, [search, statusFilter, donors]);
 
   // Calculate pagination
-  const totalDonors = filteredDonors.length;
-  const totalPages = Math.max(1, Math.ceil(totalDonors / itemsPerPage));
+  const effectiveTotalPages = Math.max(1, totalPages || 1);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedDonors = filteredDonors.slice(startIndex, endIndex);
 
   // Reset to page 1 if current page is beyond total pages
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
+    if (currentPage > effectiveTotalPages && effectiveTotalPages > 0) {
       setCurrentPage(1);
     }
-  }, [totalPages, currentPage]);
+  }, [effectiveTotalPages, currentPage]);
 
   const handleEdit = (donor) => {
     setEditingDonor(donor);
@@ -120,9 +105,9 @@ export default function DonorRegistrations() {
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this donor?")) return;
     try {
-      await axios.delete(`/api/donors/donor-registration/${id}`);
+      await axios.delete(`/donors/donor-registration/${id}`);
       toast.success("Donor deleted successfully");
-      fetchDonors();
+      fetchDonors(currentPage);
     } catch (err) {
       toast.error("Failed to delete donor");
     }
@@ -175,11 +160,11 @@ export default function DonorRegistrations() {
     const reason = prompt("Enter reason for rejection:");
     if (!reason) return;
     try {
-      await axios.post(`/api/donors/donor-registration/${id}/reject`, {
+      await axios.post(`/donors/donor-registration/${id}/reject`, {
         rejectReason: reason,
       });
       toast.success("Donor rejected successfully");
-      fetchDonors();
+      fetchDonors(currentPage);
     } catch (err) {
       toast.error("Failed to reject donor");
     }

@@ -23,11 +23,6 @@ const sidebarMenu = [
     icon: FaUserFriends,
     href: '#',
     children: [
-      { label: 'Labcorp Services', href: '/dashboard/admin/labcorp-services' },
-      { label: 'Subscriptions', href: '/dashboard/admin/subscriptions' },
-      { label: 'Appointments', href: '/dashboard/admin/appointments/lookup' },
-      { label: 'Locations', href: '/dashboard/admin/locations' },
-      { label: 'Health', href: '/dashboard/admin/health' },
       { label: 'Services', href: '/dashboard/admin/services' },
       { label: 'Registered Donor', href: '/dashboard/admin/donor_registration' },
       { label: 'Payments', href: '/dashboard/admin/payments' },
