@@ -228,82 +228,83 @@ const Services = () => {
         {loading ? (
           <LoadingSpinner message="Loading services..." />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-700">
-            <table className="min-w-full text-sm text-left text-white">
-              <thead className="bg-gray-800 text-cyan-300">
-                <tr>
-                  <th className="py-3 px-4">ID</th>
-                  <th className="py-3 px-4">Name</th>
-                  <th className="py-3 px-4">Slug</th>
-                  <th className="py-3 px-4">Service Fee</th>
-                  <th className="py-3 px-4">Account No</th>
-                  <th className="py-3 px-4">Panel ID</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Banner</th>
-                  <th className="py-3 px-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-gray-900 divide-y divide-gray-700">
-                {services.length === 0 ? (
+          <>
+            <div className="overflow-x-auto rounded-lg border border-gray-700">
+              <table className="min-w-full text-sm text-left text-white">
+                <thead className="bg-gray-800 text-cyan-300">
                   <tr>
-                    <td colSpan="6" className="py-6 text-center text-gray-500">
-                      No services found
-                    </td>
+                    <th className="py-3 px-4">ID</th>
+                    <th className="py-3 px-4">Name</th>
+                    <th className="py-3 px-4">Slug</th>
+                    <th className="py-3 px-4">Service Fee</th>
+                    <th className="py-3 px-4">Account No</th>
+                    <th className="py-3 px-4">Panel ID</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Banner</th>
+                    <th className="py-3 px-4">Actions</th>
                   </tr>
-                ) : (
-                  services.map((s) => (
-                    <tr key={s.id} className="hover:bg-gray-800 transition cursor-pointer" onClick={() => setSelectedService(s)}>
-                      <td className="py-3 px-4">{s.id}</td>
-                      <td className="py-3 px-4">{s.name}</td>
-                      <td className="py-3 px-4">{s.slug}</td>
-                      <td className="py-3 px-4">${s.serviceFee}</td>
-                      <td className="py-3 px-4" title={s.accountNo || ''}>
-                        {s.accountNo && s.accountNo.length > 8
-                          ? `${s.accountNo.slice(0, 8)}...`
-                          : s.accountNo || '-'}
-                      </td>
-                      <td className="py-3 px-4" title={s.panelID || ''}>
-                        {s.panelID && s.panelID.length > 8
-                          ? `${s.panelID.slice(0, 8)}...`
-                          : s.panelID || '-'}
-                      </td>
-
-                      <td className="py-3 px-4">
-                        {s.status ? "Active" : "Inactive"}
-                      </td>
-                      <td className="py-3 px-4">
-                        {s.bannerImage ? (
-                          <img
-                            src={getImageUrl(s.bannerImage)}
-                            alt="Banner"
-                            className="h-10 w-16 object-cover rounded"
-                          />
-                        ) : (
-                          <span className="text-gray-500 italic">No image</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 flex gap-3" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          className="text-blue-400 hover:text-blue-600"
-                          onClick={() => openModal(s)}
-                          title="Edit"
-                        >
-                          <FiEdit />
-                        </button>
-                        <button
-                          className="text-red-400 hover:text-red-600"
-                          onClick={() => confirmDelete(s.id)}
-                          title="Delete"
-                        >
-                          <FiTrash2 />
-                        </button>
+                </thead>
+                <tbody className="bg-gray-900 divide-y divide-gray-700">
+                  {services.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="py-6 text-center text-gray-500">
+                        No services found
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    services.map((s) => (
+                      <tr key={s.id} className="hover:bg-gray-800 transition cursor-pointer" onClick={() => setSelectedService(s)}>
+                        <td className="py-3 px-4">{s.id}</td>
+                        <td className="py-3 px-4">{s.name}</td>
+                        <td className="py-3 px-4">{s.slug}</td>
+                        <td className="py-3 px-4">${s.serviceFee}</td>
+                        <td className="py-3 px-4" title={s.accountNo || ''}>
+                          {s.accountNo && s.accountNo.length > 8
+                            ? `${s.accountNo.slice(0, 8)}...`
+                            : s.accountNo || '-'}
+                        </td>
+                        <td className="py-3 px-4" title={s.panelID || ''}>
+                          {s.panelID && s.panelID.length > 8
+                            ? `${s.panelID.slice(0, 8)}...`
+                            : s.panelID || '-'}
+                        </td>
 
+                        <td className="py-3 px-4">
+                          {s.status ? "Active" : "Inactive"}
+                        </td>
+                        <td className="py-3 px-4">
+                          {s.bannerImage ? (
+                            <img
+                              src={getImageUrl(s.bannerImage)}
+                              alt="Banner"
+                              className="h-10 w-16 object-cover rounded"
+                            />
+                          ) : (
+                            <span className="text-gray-500 italic">No image</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 flex gap-3" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="text-blue-400 hover:text-blue-600"
+                            onClick={() => openModal(s)}
+                            title="Edit"
+                          >
+                            <FiEdit />
+                          </button>
+                          <button
+                            className="text-red-400 hover:text-red-600"
+                            onClick={() => confirmDelete(s.id)}
+                            title="Delete"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
             <Pagination
               currentPage={page}
               totalPages={totalPages}
@@ -312,7 +313,7 @@ const Services = () => {
               itemsPerPage={10}
               itemLabel="services"
             />
-          </div>
+          </>
         )}
 
         {/* Details Modal */}

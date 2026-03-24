@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "@/app/lib/axios";
 import toast from "react-hot-toast";
 import AuthGuard from "@/app/lib/authGuard";
@@ -19,83 +19,57 @@ const DEFAULT_ACCOUNT_NUMBER = "09456155";
 
 export default function DonorRegistrations() {
   const [donors, setDonors] = useState([]);
-  const [filteredDonors, setFilteredDonors] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalDonors, setTotalDonors] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingDonor, setEditingDonor] = useState(null);
   const [selectedDonor, setSelectedDonor] = useState(null);
   const itemsPerPage = 10;
 
-  const fetchDonors = async (page = 1, overrides = {}) => {
+  const loadDonors = useCallback(async () => {
     try {
-      const effectiveSearch = overrides.search ?? search;
-      const effectiveStatus = overrides.status ?? statusFilter;
-
+      setLoading(true);
       const res = await axios.get("/donors/donor-registrations", {
         params: {
-          page,
+          page: currentPage,
           perPage: itemsPerPage,
-          search: effectiveSearch || undefined,
-          status: effectiveStatus || undefined,
+          search: search || undefined,
+          status: statusFilter || undefined,
         },
       });
 
       const responseData = res.data?.data || [];
       const meta = res.data?.meta || {};
+      const lastPage = Math.max(1, meta.last_page || 1);
+      const total = meta.total ?? responseData.length ?? 0;
 
-      setDonors(responseData);
-      setFilteredDonors(responseData);
-      setTotalDonors(meta.total || responseData.length || 0);
-      setTotalPages(meta.last_page || meta.totalPages || 1);
-      setCurrentPage(meta.current_page || page || 1);
+      setDonors(Array.isArray(responseData) ? responseData : []);
+      setTotalItems(total);
+      setTotalPages(lastPage);
+
+      if (currentPage > lastPage) {
+        setCurrentPage(lastPage);
+      } else if (responseData.length === 0 && currentPage > 1 && total > 0) {
+        setCurrentPage((p) => Math.max(1, p - 1));
+      }
     } catch (err) {
       console.error("Fetch donors error:", err);
       toast.error("Failed to fetch donors");
       setDonors([]);
-      setFilteredDonors([]);
+      setTotalItems(0);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [currentPage, search, statusFilter]);
 
   useEffect(() => {
-    fetchDonors(1);
-  }, []);
-
-  useEffect(() => {
-    let filtered = donors;
-
-    if (search) {
-      filtered = filtered.filter(
-        (d) =>
-          d.donorNameFirst.toLowerCase().includes(search.toLowerCase()) ||
-          d.donorNameLast.toLowerCase().includes(search.toLowerCase()) ||
-          d.panelId.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    if (statusFilter) {
-      filtered = filtered.filter((d) => d.status === statusFilter);
-    }
-
-    setFilteredDonors(filtered);
-    setCurrentPage(1);
-  }, [search, statusFilter, donors]);
-
-  // Calculate pagination
-  const effectiveTotalPages = Math.max(1, totalPages || 1);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedDonors = filteredDonors.slice(startIndex, endIndex);
-
-  // Reset to page 1 if current page is beyond total pages
-  useEffect(() => {
-    if (currentPage > effectiveTotalPages && effectiveTotalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [effectiveTotalPages, currentPage]);
+    loadDonors();
+  }, [loadDonors]);
 
   const handleEdit = (donor) => {
     setEditingDonor(donor);
@@ -107,7 +81,7 @@ export default function DonorRegistrations() {
     try {
       await axios.delete(`/donors/donor-registration/${id}`);
       toast.success("Donor deleted successfully");
-      fetchDonors(currentPage);
+      loadDonors();
     } catch (err) {
       toast.error("Failed to delete donor");
     }
@@ -146,7 +120,7 @@ export default function DonorRegistrations() {
           ? `Donor confirmed. LabCorp Reg#: ${data.labcorpRegistrationNumber}`
           : "Donor confirmed successfully"
       );
-      fetchDonors();
+      loadDonors();
     } catch (err) {
       const message =
         err?.response?.data?.message ||
@@ -164,7 +138,7 @@ export default function DonorRegistrations() {
         rejectReason: reason,
       });
       toast.success("Donor rejected successfully");
-      fetchDonors(currentPage);
+      loadDonors();
     } catch (err) {
       toast.error("Failed to reject donor");
     }
@@ -189,12 +163,18 @@ export default function DonorRegistrations() {
           <div className="flex flex-col md:flex-row gap-3">
             <SearchInput
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
               className="flex-1"
             />
             <FilterSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Status"
               options={[
                 { value: 'PENDING', label: 'Pending' },
@@ -207,6 +187,9 @@ export default function DonorRegistrations() {
           </div>
 
           {/* Table */}
+          {loading ? (
+            <LoadingSpinner message="Loading donors..." />
+          ) : (
           <div className="overflow-x-auto rounded shadow bg-gray-800">
             <table className="min-w-full text-sm text-left text-gray-200">
               <thead className="bg-gray-700 uppercase text-xs">
@@ -230,14 +213,14 @@ export default function DonorRegistrations() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedDonors.length === 0 && (
+                {donors.length === 0 && (
                   <tr>
                     <td colSpan="8" className="text-center py-6 text-gray-400">
                       No donors found.
                     </td>
                   </tr>
                 )}
-                {paginatedDonors.map((d) => (
+                {donors.map((d) => (
                   <tr
                     key={d.id}
                     className="hover:bg-gray-700 border-b border-gray-600 cursor-pointer"
@@ -249,9 +232,9 @@ export default function DonorRegistrations() {
                     </td>
                     <td className="px-4 py-2">{d.donorEmail}</td>
                     <td className="px-4 py-2">
-                      {d.panelId.length > 15
-                        ? d.panelId.slice(0, 15) + "..."
-                        : d.panelId}
+                      {String(d.panelId || "").length > 15
+                        ? String(d.panelId).slice(0, 15) + "..."
+                        : d.panelId ?? ""}
                     </td>
 
                     <td className="px-4 py-2">
@@ -298,14 +281,15 @@ export default function DonorRegistrations() {
               </tbody>
             </table>
           </div>
+          )}
 
           {/* Pagination */}
-          {totalDonors > 0 && (
+          {!loading && totalItems > 0 && (
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              totalItems={totalDonors}
+              totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               itemLabel="donors"
             />
@@ -319,7 +303,7 @@ export default function DonorRegistrations() {
               setEditingDonor(null);
             }}
             donor={editingDonor}
-            onSaved={fetchDonors}
+            onSaved={loadDonors}
           />
 
           {/* Details Modal */}

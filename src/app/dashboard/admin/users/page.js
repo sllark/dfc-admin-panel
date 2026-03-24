@@ -173,99 +173,101 @@ const Users = () => {
         {loading ? (
           <LoadingSpinner message="Loading users..." />
         ) : (
-          <div className="overflow-x-auto rounded-lg shadow border border-gray-800">
-            <table className="min-w-full text-sm text-left text-white">
-              <thead className="bg-gray-800 text-cyan-300">
-                <tr>
-                  <th className="px-4 py-3">User</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Role</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Last Login</th>
-                  <th className="px-4 py-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700 bg-gray-900">
-                {Array.isArray(users) && users.length > 0 ? (
-                  users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-800 transition cursor-pointer" onClick={() => {
-                    // Try to use existing user data first, or fetch if needed
-                    if (user.email && user.username) {
-                      setSelectedUser(user);
-                    } else {
-                      viewUser(user.id);
-                    }
-                  }}>
-                    <td className="px-4 py-3 flex items-center gap-3">
-                      <img
-                        src={getImageUrl(user.profileImage)}
-                        alt="avatar"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <span className="font-medium">{user.username}</span>
-                    </td>
-                    <td className="px-4 py-3">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <a
-                        href={`tel:${user.phone}`}
-                        className="text-cyan-400 flex items-center gap-1"
-                      >
-                        <FaPhoneAlt /> {user.phone}
-                      </a>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          user.role === "ADMIN"
-                            ? "bg-purple-600"
-                            : "bg-gray-700"
-                        }`}
-                      >
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {user.isActive ? (
-                        <FaCheckCircle className="text-green-500" />
-                      ) : (
-                        <FaTimesCircle className="text-red-500" />
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{formatDate(user.lastLogin)}</td>
-                    <td className="px-4 py-3 text-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => viewUser(user.id)}
-                        className="text-cyan-400 hover:text-cyan-300"
-                        title="View"
-                      >
-                        <FaEye />
-                      </button>
-                      <button
-                        onClick={() => handleEditClick(user)}
-                        className="text-yellow-400 hover:text-yellow-300"
-                        title="Edit"
-                      >
-                        <FaEdit />
-                      </button>
-                      <button
-                        className="text-red-500 hover:text-red-400"
-                        title="Delete"
-                      >
-                        <FaTrash />
-                      </button>
-                    </td>
-                  </tr>
-                  ))
-                ) : (
+          <>
+            <div className="overflow-x-auto rounded-lg shadow border border-gray-800">
+              <table className="min-w-full text-sm text-left text-white">
+                <thead className="bg-gray-800 text-cyan-300">
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-gray-400">
-                      No users found
-                    </td>
+                    <th className="px-4 py-3">User</th>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Phone</th>
+                    <th className="px-4 py-3">Role</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Last Login</th>
+                    <th className="px-4 py-3 text-center">Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-700 bg-gray-900">
+                  {Array.isArray(users) && users.length > 0 ? (
+                    users.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-800 transition cursor-pointer" onClick={() => {
+                      // Try to use existing user data first, or fetch if needed
+                      if (user.email && user.username) {
+                        setSelectedUser(user);
+                      } else {
+                        viewUser(user.id);
+                      }
+                    }}>
+                      <td className="px-4 py-3 flex items-center gap-3">
+                        <img
+                          src={getImageUrl(user.profileImage)}
+                          alt="avatar"
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <span className="font-medium">{user.username}</span>
+                      </td>
+                      <td className="px-4 py-3">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <a
+                          href={`tel:${user.phone}`}
+                          className="text-cyan-400 flex items-center gap-1"
+                        >
+                          <FaPhoneAlt /> {user.phone}
+                        </a>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            user.role === "ADMIN"
+                              ? "bg-purple-600"
+                              : "bg-gray-700"
+                          }`}
+                        >
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {user.isActive ? (
+                          <FaCheckCircle className="text-green-500" />
+                        ) : (
+                          <FaTimesCircle className="text-red-500" />
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{formatDate(user.lastLogin)}</td>
+                      <td className="px-4 py-3 text-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => viewUser(user.id)}
+                          className="text-cyan-400 hover:text-cyan-300"
+                          title="View"
+                        >
+                          <FaEye />
+                        </button>
+                        <button
+                          onClick={() => handleEditClick(user)}
+                          className="text-yellow-400 hover:text-yellow-300"
+                          title="Edit"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          className="text-red-500 hover:text-red-400"
+                          title="Delete"
+                        >
+                          <FaTrash />
+                        </button>
+                      </td>
+                    </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="px-4 py-8 text-center text-gray-400">
+                        No users found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
             <Pagination
               currentPage={page}
               totalPages={totalPages || 1}
@@ -274,7 +276,7 @@ const Users = () => {
               itemsPerPage={pageSize}
               itemLabel="users"
             />
-          </div>
+          </>
         )}
 
         {/* Modal for user details */}
