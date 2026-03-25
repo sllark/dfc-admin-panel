@@ -7,6 +7,7 @@ import Link from "next/link";
 import AuthGuard from "@/app/lib/authGuard";
 import Layout from "@/app/components/common/layout";
 import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
 
 export default function LocationDetailPage() {
   const params = useParams();
@@ -21,6 +22,7 @@ export default function LocationDetailPage() {
     let cancelled = false;
 
     async function fetchLocation() {
+      const startedAt = Date.now();
       try {
         const res = await axios.get(`/api/admin/locations/${id}`);
         if (!cancelled) {
@@ -35,6 +37,7 @@ export default function LocationDetailPage() {
         }
       } finally {
         if (!cancelled) {
+          await ensureMinDuration(startedAt, 600);
           setLoading(false);
         }
       }
