@@ -20,12 +20,15 @@ import DetailsModal from "@/app/components/ui/DetailsModal";
 import StatusBadge from "@/app/components/ui/StatusBadge";
 import { formatDate } from "@/app/utils/dateUtils";
 import { getImageUrl } from "@/app/utils/imageUtils";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
+import LoadingButton from "@/app/components/ui/LoadingButton";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState(null);
+  const [savingUser, setSavingUser] = useState(false);
   const fileInputRef = useRef(null);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -34,6 +37,7 @@ const Users = () => {
   const [pageSize] = useState(10);
 
   const fetchUsers = async () => {
+    const startedAt = Date.now();
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
@@ -67,6 +71,7 @@ const Users = () => {
       setUsers([]); // Ensure users is always an array even on error
       toast.error("Failed to load users");
     } finally {
+      await ensureMinDuration(startedAt, 600);
       setLoading(false);
     }
   };
@@ -114,6 +119,8 @@ const Users = () => {
   };
 
   const handleUpdateUser = async () => {
+    const startedAt = Date.now();
+    setSavingUser(true);
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
@@ -137,6 +144,10 @@ const Users = () => {
       toast.success("User updated successfully!");
     } catch (err) {
       console.error("Failed to update user:", err);
+      toast.error("Failed to update user");
+    } finally {
+      await ensureMinDuration(startedAt, 600);
+      setSavingUser(false);
     }
   };
 
@@ -355,15 +366,18 @@ const Users = () => {
               />
 
               <div className="flex gap-2 mt-4">
-                <button
+                <LoadingButton
                   onClick={handleUpdateUser}
-                  className="flex-1 bg-cyan-500 hover:bg-cyan-600 py-2 rounded"
+                  loading={savingUser}
+                  spinnerColor="#22d3ee"
+                  className="flex-1 bg-cyan-500 hover:bg-cyan-600 py-2 rounded disabled:opacity-100 disabled:cursor-not-allowed"
                 >
                   Save
-                </button>
+                </LoadingButton>
                 <button
                   onClick={() => setEditingUser(null)}
-                  className="flex-1 bg-gray-700 hover:bg-gray-600 py-2 rounded"
+                  disabled={savingUser}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
