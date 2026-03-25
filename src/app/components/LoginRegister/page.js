@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import axios from "@/app/lib/axios";
 import { FaUser, FaLock, FaEnvelope, FaPhone } from "react-icons/fa";
 import toast from "react-hot-toast";
+import LoadingButton from "@/app/components/ui/LoadingButton";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
 
 const LoginRegister = () => {
     const [isRegister, setIsRegister] = useState(false);
@@ -23,6 +25,7 @@ const LoginRegister = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const startedAt = Date.now();
         setLoading(true);
         
         try {
@@ -35,13 +38,11 @@ const LoginRegister = () => {
                     !form.phone.trim()
                 ) {
                     toast.error("Please fill in all registration fields.");
-                    setLoading(false);
                     return;
                 }
             } else {
                 if (!form.email.trim() || !form.password.trim()) {
                     toast.error("Please enter both email and password.");
-                    setLoading(false);
                     return;
                 }
             }
@@ -85,6 +86,7 @@ const LoginRegister = () => {
             toast.error(message);
             console.error("Auth error:", err);
         } finally {
+            await ensureMinDuration(startedAt, 600);
             setLoading(false);
         }
     };
@@ -172,13 +174,14 @@ const LoginRegister = () => {
                         </div>
                     )}
 
-                    <button
+                    <LoadingButton
                         type="submit"
-                        disabled={loading}
-                        className="w-full py-3 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-gray-900 font-bold hover:scale-[1.02] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        loading={loading}
+                        spinnerColor="#0ea5e9"
+                        className="w-full py-3 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-gray-900 font-bold hover:scale-[1.02] transition disabled:opacity-100 disabled:cursor-not-allowed"
                     >
-                        {loading ? "Processing..." : isRegister ? "Register" : "Login"}
-                    </button>
+                        {isRegister ? "Register" : "Login"}
+                    </LoadingButton>
 
                     <p className="text-center text-sm text-white/80">
                         {isRegister ? "Already have an account?" : "Don't have an account?"}{" "}
