@@ -13,6 +13,8 @@ import SearchInput from '@/app/components/ui/SearchInput';
 import FilterSelect from '@/app/components/ui/FilterSelect';
 import DetailsModal from '@/app/components/ui/DetailsModal';
 import { formatDate } from '@/app/utils/dateUtils';
+import { ensureMinDuration } from '@/app/lib/loadingUtils';
+import LoadingButton from '@/app/components/ui/LoadingButton';
 
 const AdminPayments = () => {
   const [payments, setPayments] = useState([]);
@@ -25,6 +27,7 @@ const AdminPayments = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creatingPayment, setCreatingPayment] = useState(false);
   const [createFormData, setCreateFormData] = useState({
     donorRegistrationId: '',
     amount: '',
@@ -35,6 +38,7 @@ const AdminPayments = () => {
   const itemsPerPage = 10;
 
   const fetchPayments = async (page = 1, status = '') => {
+    const startedAt = Date.now();
     setLoading(true);
     try {
       const params = {
@@ -63,6 +67,7 @@ const AdminPayments = () => {
       setTotalPages(1);
       setTotalItems(0);
     } finally {
+      await ensureMinDuration(startedAt, 600);
       setLoading(false);
     }
   };
@@ -122,6 +127,8 @@ const AdminPayments = () => {
 
   const handleCreatePayment = async (e) => {
     e.preventDefault();
+    const startedAt = Date.now();
+    setCreatingPayment(true);
     try {
       const res = await axios.post('/payments', {
         donorRegistrationId: parseInt(createFormData.donorRegistrationId),
@@ -144,6 +151,9 @@ const AdminPayments = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create payment');
+    } finally {
+      await ensureMinDuration(startedAt, 600);
+      setCreatingPayment(false);
     }
   };
 
@@ -372,16 +382,19 @@ const AdminPayments = () => {
                     <button
                       type="button"
                       onClick={() => setShowCreateModal(false)}
-                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
+                      disabled={creatingPayment}
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
-                    <button
+                    <LoadingButton
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
+                      loading={creatingPayment}
+                      spinnerColor="#93c5fd"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white disabled:opacity-100 disabled:cursor-not-allowed"
                     >
                       Create
-                    </button>
+                    </LoadingButton>
                   </div>
                 </form>
               </div>
