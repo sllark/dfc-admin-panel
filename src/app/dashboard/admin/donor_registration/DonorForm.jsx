@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import axios from "@/app/lib/axios";
 import toast from "react-hot-toast";
+import LoadingButton from "@/app/components/ui/LoadingButton";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
 
 export default function DonorForm({ initialData = null, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -17,6 +19,7 @@ export default function DonorForm({ initialData = null, onSuccess }) {
     registrationExpirationDate: "",
     labcorpRegistrationNumber: "",
   });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -53,6 +56,9 @@ export default function DonorForm({ initialData = null, onSuccess }) {
       return;
     }
 
+    const startedAt = Date.now();
+    setSaving(true);
+
     const payload = {
       ...formData,
       donorDateOfBirth: new Date(formData.donorDateOfBirth).toISOString(),
@@ -72,6 +78,9 @@ export default function DonorForm({ initialData = null, onSuccess }) {
       if (onSuccess) onSuccess();
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to save donor");
+    } finally {
+      await ensureMinDuration(startedAt, 600);
+      setSaving(false);
     }
   };
 
@@ -121,12 +130,14 @@ export default function DonorForm({ initialData = null, onSuccess }) {
       </div>
 
       <div className="flex justify-end pt-4">
-        <button
+        <LoadingButton
           type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded shadow"
+          loading={saving}
+          spinnerColor="#60a5fa"
+          className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded shadow disabled:opacity-100 disabled:cursor-not-allowed"
         >
           {initialData ? "Update Donor" : "Add Donor"}
-        </button>
+        </LoadingButton>
       </div>
     </form>
   );
