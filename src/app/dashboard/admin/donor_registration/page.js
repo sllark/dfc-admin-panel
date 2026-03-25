@@ -14,6 +14,7 @@ import FilterSelect from "@/app/components/ui/FilterSelect";
 import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
 import DetailsModal from "@/app/components/ui/DetailsModal";
 import { formatSimpleDate, formatDate } from "@/app/utils/dateUtils";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
 
 const DEFAULT_ACCOUNT_NUMBER = "09456155";
 
@@ -31,6 +32,7 @@ export default function DonorRegistrations() {
   const itemsPerPage = 10;
 
   const loadDonors = useCallback(async () => {
+    const startedAt = Date.now();
     try {
       setLoading(true);
       const res = await axios.get("/donors/donor-registrations", {
@@ -63,6 +65,8 @@ export default function DonorRegistrations() {
       setTotalItems(0);
       setTotalPages(1);
     } finally {
+      // Prevent loader flicker on very fast responses.
+      await ensureMinDuration(startedAt, 600);
       setLoading(false);
     }
   }, [currentPage, search, statusFilter]);
