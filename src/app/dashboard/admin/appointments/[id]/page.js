@@ -6,6 +6,8 @@ import axios from "@/app/lib/axios";
 import AuthGuard from "@/app/lib/authGuard";
 import Layout from "@/app/components/common/layout";
 import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
+import LoadingButton from "@/app/components/ui/LoadingButton";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
 
 export default function AppointmentDetailPage() {
   const params = useParams();
@@ -25,6 +27,7 @@ export default function AppointmentDetailPage() {
     let cancelled = false;
 
     async function fetchAppointment() {
+      const startedAt = Date.now();
       try {
         const res = await axios.get(`/api/admin/appointments/${id}`);
         if (!cancelled) {
@@ -39,6 +42,7 @@ export default function AppointmentDetailPage() {
         }
       } finally {
         if (!cancelled) {
+          await ensureMinDuration(startedAt, 600);
           setLoading(false);
         }
       }
@@ -58,6 +62,7 @@ export default function AppointmentDetailPage() {
     );
     if (!confirmed) return;
 
+    const startedAt = Date.now();
     setCancelling(true);
     setCancelError(null);
     setCancelSuccess(null);
@@ -76,6 +81,7 @@ export default function AppointmentDetailPage() {
           "Failed to cancel appointment. Please try again."
       );
     } finally {
+      await ensureMinDuration(startedAt, 600);
       setCancelling(false);
     }
   };
@@ -84,6 +90,7 @@ export default function AppointmentDetailPage() {
     const trackingId = appointment?.trackingId;
     if (!trackingId) return;
 
+    const startedAt = Date.now();
     setLoadingTracking(true);
     setTrackingStatus(null);
     try {
@@ -98,6 +105,7 @@ export default function AppointmentDetailPage() {
           "Failed to load tracking status. Please try again.",
       });
     } finally {
+      await ensureMinDuration(startedAt, 600);
       setLoadingTracking(false);
     }
   };
@@ -130,13 +138,14 @@ export default function AppointmentDetailPage() {
                     </p>
                   </div>
                   <div className="flex gap-3">
-                    <button
+                    <LoadingButton
                       onClick={handleCancel}
-                      disabled={cancelling}
-                      className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      loading={cancelling}
+                      spinnerColor="#ef4444"
+                      className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-100 disabled:cursor-not-allowed"
                     >
-                      {cancelling ? "Cancelling…" : "Cancel Appointment"}
-                    </button>
+                      Cancel Appointment
+                    </LoadingButton>
                   </div>
                 </div>
 
@@ -221,13 +230,15 @@ export default function AppointmentDetailPage() {
                   <h2 className="text-md font-semibold text-gray-100">
                     Tracking Status
                   </h2>
-                  <button
+                  <LoadingButton
                     onClick={handleLoadTracking}
-                    disabled={loadingTracking || !appointment?.trackingId}
-                    className="rounded-md bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-gray-900 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    loading={loadingTracking}
+                    disabled={!appointment?.trackingId}
+                    spinnerColor="#22d3ee"
+                    className="rounded-md bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-gray-900 hover:bg-cyan-400 disabled:opacity-100 disabled:cursor-not-allowed"
                   >
-                    {loadingTracking ? "Loading…" : "Refresh status"}
-                  </button>
+                    Refresh status
+                  </LoadingButton>
                 </div>
                 {!appointment?.trackingId && (
                   <p className="text-xs text-gray-400">
