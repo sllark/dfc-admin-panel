@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import axios from "@/app/lib/axios";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import toast from "react-hot-toast";
+import LoadingButton from "@/app/components/ui/LoadingButton";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
 
 const ForgetPass = () => {
   const router = useRouter();
@@ -21,6 +23,7 @@ const ForgetPass = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const startedAt = Date.now();
     setLoading(true);
     try {
       if (step === 1) {
@@ -47,6 +50,7 @@ const ForgetPass = () => {
       const message = err?.response?.data?.message || err?.response?.data?.error || "Something went wrong";
       toast.error(message);
     } finally {
+      await ensureMinDuration(startedAt, 600);
       setLoading(false);
     }
   };
@@ -110,19 +114,18 @@ const ForgetPass = () => {
             </div>
           )}
 
-          <button
+          <LoadingButton
             type="submit"
-            disabled={loading}
-            className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 rounded-xl transition"
+            loading={loading}
+            spinnerColor="#22d3ee"
+            className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 rounded-xl transition disabled:opacity-100 disabled:cursor-not-allowed"
           >
-            {loading
-              ? "Processing..."
-              : step === 1
+            {step === 1
               ? "Send OTP"
               : step === 2
               ? "Verify OTP"
               : "Reset Password"}
-          </button>
+          </LoadingButton>
 
           <p className="text-center mt-4">
             <span
