@@ -13,6 +13,9 @@ import {
 } from "react-icons/fi";
 import AuthGuard from "@/app/lib/authGuard";
 import Layout from "@/app/components/common/layout";
+import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
+import LoadingButton from "@/app/components/ui/LoadingButton";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
 
 const UpdateProfile = () => {
   const [user, setUser] = useState(null);
@@ -125,6 +128,7 @@ const UpdateProfile = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    const startedAt = Date.now();
     setSaving(true);
 
     try {
@@ -180,11 +184,13 @@ const UpdateProfile = () => {
       console.error("Update error:", err);
       toast.error(err?.response?.data?.message || "Update failed");
     } finally {
+      await ensureMinDuration(startedAt, 600);
       setSaving(false);
     }
   };
 
-  if (loading) return <p className="text-gray-400">Loading profile...</p>;
+  if (loading)
+    return <LoadingSpinner message="Loading profile..." spinnerColor="#38bdf8" />;
 
   return (
     <AuthGuard>
@@ -343,13 +349,14 @@ const UpdateProfile = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 type="submit"
-                disabled={saving}
-                className="w-full sm:flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 rounded-lg text-white font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                loading={saving}
+                spinnerColor="#0ea5e9"
+                className="w-full sm:flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 rounded-lg text-white font-semibold transition disabled:opacity-100 disabled:cursor-not-allowed text-sm sm:text-base"
               >
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
+                Save Changes
+              </LoadingButton>
             </div>
           </form>
         </div>
