@@ -60,7 +60,16 @@ const UpdateProfile = () => {
         setLoading(false);
       }
     };
-
+    // Deployment fixes only for development
+    console.log("fetchProfile");
+    console.log(user);
+    console.log(form);
+    console.log(loading);
+    console.log(saving);
+    console.log(fileInputRef);
+    console.log(router);
+    console.log(axios);
+    console.log(toast);
     fetchProfile();
   }, []);
 
