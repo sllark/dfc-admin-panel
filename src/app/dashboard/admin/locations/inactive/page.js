@@ -6,6 +6,7 @@ import Link from "next/link";
 import AuthGuard from "@/app/lib/authGuard";
 import Layout from "@/app/components/common/layout";
 import LoadingSpinner from "@/app/components/ui/LoadingSpinner";
+import { ensureMinDuration } from "@/app/lib/loadingUtils";
 
 export default function InactiveLocationsPage() {
   const [locations, setLocations] = useState([]);
@@ -17,6 +18,7 @@ export default function InactiveLocationsPage() {
     let cancelled = false;
 
     async function fetchInactive() {
+      const startedAt = Date.now();
       try {
         const res = await axios.get("/api/admin/locations/inactive", {
           params: { noOfDays },
@@ -33,6 +35,7 @@ export default function InactiveLocationsPage() {
         }
       } finally {
         if (!cancelled) {
+          await ensureMinDuration(startedAt, 600);
           setLoading(false);
         }
       }
