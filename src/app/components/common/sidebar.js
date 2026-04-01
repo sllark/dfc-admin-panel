@@ -9,6 +9,7 @@ import {
   FiCreditCard,
   FiUsers,
   FiUser,
+  FiGrid,
 } from 'react-icons/fi'
 import Link from 'next/link'
 
@@ -18,6 +19,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const sidebarMenu = [
     { label: 'Home', icon: FiHome, href: '/dashboard' },
     { label: 'Services', icon: FiBriefcase, href: '/dashboard/admin/services' },
+    { label: 'Pricing Structure', icon: FiGrid, href: '/dashboard/admin/pricing_structure' },
     {
       label: 'Registered Donors',
       icon: FiUserCheck,
