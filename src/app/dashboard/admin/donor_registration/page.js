@@ -325,6 +325,25 @@ export default function DonorRegistrations() {
               { key: 'donorSSN', label: 'SSN' },
               { key: 'donorDateOfBirth', label: 'Date of Birth', format: (val) => formatSimpleDate(val) },
               { key: 'panelId', label: 'Panel ID' },
+              {
+                key: 'accountNumber',
+                label: 'Account No',
+                format: (val, data) => {
+                  const direct =
+                    val ??
+                    data?.accountNo ??
+                    data?.account_no ??
+                    data?.originalAccountNo ??
+                    data?.originalAccountNumber;
+                  if (direct != null && String(direct).trim() !== "") return String(direct);
+
+                  // Fallback: infer based on known catalog mapping.
+                  // DOT test code is 708392 -> DOT account 09456155, otherwise non-DOT account 09027655.
+                  const panelCode = data?.panelId;
+                  if (String(panelCode) === "708392") return "09456155";
+                  return "09027655";
+                },
+              },
               { key: 'reasonForTest', label: 'Reason for Test' },
               { key: 'registrationExpirationDate', label: 'Registration Expiration Date', format: (val) => formatSimpleDate(val) },
               { key: 'labcorpRegistrationNumber', label: 'LabCorp Registration Number' },
