@@ -14,7 +14,8 @@ const instance = axios.create({
 
 instance.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token =
+            typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -28,6 +29,8 @@ instance.interceptors.response.use(
     (error) => {
         const status = error?.response?.status;
         const requestUrl = error?.config?.url || '';
+        const skipGlobalErrorToast = Boolean(error?.config?.skipGlobalErrorToast);
+        const serverMessage = error?.response?.data?.message;
 
         // Expired or invalid token: clear session and send user to login (not on public auth calls).
         if (
@@ -41,11 +44,17 @@ instance.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        const message =
-            error?.response?.data?.message ||
-            error?.message ||
-            'Something went wrong. Please try again.';
-        toast.error(message);
+        let message = serverMessage;
+        if (!message) {
+            if (status === 400) message = 'Request failed. Please check your input and try again.';
+            else if (status === 403) message = 'You do not have permission to perform this action.';
+            else if (status === 404) message = 'Requested resource was not found.';
+            else if (status >= 500) message = 'Server error. Please try again shortly.';
+            else message = error?.message || 'Something went wrong. Please try again.';
+        }
+        if (!skipGlobalErrorToast) {
+            toast.error(message);
+        }
         return Promise.reject(error);
     }
 );
