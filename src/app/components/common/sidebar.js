@@ -7,6 +7,7 @@ import {
   FiBriefcase,
   FiUserCheck,
   FiCreditCard,
+  FiFileText,
   FiUsers,
   FiUser,
   FiGrid,
@@ -26,6 +27,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       href: '/dashboard/admin/donor_registration',
     },
     { label: 'Payments', icon: FiCreditCard, href: '/dashboard/admin/payments' },
+    { label: 'Reports', icon: FiFileText, href: '/dashboard/admin/reports' },
     { label: 'Users', icon: FiUsers, href: '/dashboard/admin/users' },
     { label: 'Profile', icon: FiUser, href: '/dashboard/settings' },
   ]
