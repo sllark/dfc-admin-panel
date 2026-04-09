@@ -22,6 +22,115 @@ const ReportStatusBadge = ({ value }) => {
   return <StatusBadge status={value} />;
 };
 
+const extractErrorInfo = (error) => {
+  const status = error?.response?.status;
+  const data = error?.response?.data;
+  const code = error?.code;
+  const isTimeout =
+    code === "ECONNABORTED" ||
+    /timeout/i.test(String(error?.message || "")) ||
+    /timeout/i.test(String(data?.message || ""));
+  return {
+    status,
+    code,
+    isTimeout,
+    message:
+      (typeof data === "string" ? data : data?.message) ||
+      error?.message ||
+      (typeof error === "string" ? error : "Unknown error"),
+    responseData: data ?? null,
+    responseHeaders: error?.response?.headers
+      ? Object.fromEntries(
+          Object.entries(error.response.headers).filter(([, v]) => v != null)
+        )
+      : null,
+    requestUrl: error?.config?.url,
+    requestBaseURL: error?.config?.baseURL,
+    requestTimeoutMs: error?.config?.timeout,
+    rawError: error,
+  };
+};
+
+const PDF_UPLOAD_TIMEOUT_MS = 120000;
+
+const peekPdfMagic = async (blob) => {
+  try {
+    const buf = await blob.slice(0, 8).arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    const ascii = String.fromCharCode(...bytes);
+    return { ascii, hex: [...bytes].map((b) => b.toString(16).padStart(2, "0")).join(" ") };
+  } catch (e) {
+    return { error: String(e?.message || e) };
+  }
+};
+
+const buildPdfFromPreview = async (containerId, logLabel = "buildPdf") => {
+  const t0 = performance.now();
+  const previewContainer = document.getElementById(containerId);
+  if (!previewContainer) {
+    console.error(`[AdminReportDetail] ${logLabel}: DOM node missing`, {
+      containerId,
+      hint: "Expected element with this id for html2canvas",
+    });
+    throw new Error("Could not find PDF preview area.");
+  }
+
+  const rect = previewContainer.getBoundingClientRect();
+  console.info(`[AdminReportDetail] ${logLabel}: start`, {
+    containerId,
+    width: rect.width,
+    height: rect.height,
+    childCount: previewContainer.children?.length,
+  });
+
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
+
+  const t1 = performance.now();
+  const canvas = await html2canvas(previewContainer, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+  });
+  const t2 = performance.now();
+
+  const imgData = canvas.toDataURL("image/png");
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "pt",
+    format: "letter",
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const imageWidth = pageWidth;
+  const imageHeight = (canvas.height * imageWidth) / canvas.width;
+  let y = 0;
+
+  pdf.addImage(imgData, "PNG", 0, y, imageWidth, imageHeight, undefined, "FAST");
+  while (y + imageHeight > pageHeight) {
+    y -= pageHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, "PNG", 0, y, imageWidth, imageHeight, undefined, "FAST");
+  }
+
+  const blob = pdf.output("blob");
+  const t3 = performance.now();
+  const magic = await peekPdfMagic(blob);
+  console.info(`[AdminReportDetail] ${logLabel}: done`, {
+    html2canvasMs: Math.round(t2 - t1),
+    jsPdfMs: Math.round(t3 - t2),
+    totalMs: Math.round(t3 - t0),
+    canvasPx: { w: canvas.width, h: canvas.height },
+    blobBytes: blob.size,
+    pdfMagic: magic,
+  });
+
+  return blob;
+};
+
 const AdminReportDetailPage = () => {
   const router = useRouter();
   const params = useParams();
@@ -34,6 +143,7 @@ const AdminReportDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const queryParams = useMemo(
     () => (revision ? { revision } : undefined),
@@ -134,25 +244,16 @@ const AdminReportDetailPage = () => {
 
   const handleDownloadPdf = async () => {
     if (!report) return;
-    if (!isPdfOperationallyReady) {
-      toast.error("PDF not available yet");
-      return;
-    }
 
     const startedAt = Date.now();
     setDownloading(true);
     try {
-      console.info("[AdminReportDetail] GET PDF", {
-        endpoint: `/veriport/reports/${veriportReportId}/pdf`,
-        params: queryParams || {},
+      const previewContainerId = `admin-veriport-preview-${veriportReportId}`;
+      console.info("[AdminReportDetail] Local PDF generation for download", {
+        source: "preview-dom",
+        containerId: previewContainerId,
       });
-      const res = await axios.get(`/veriport/reports/${veriportReportId}/pdf`, {
-        params: queryParams,
-        responseType: "blob",
-        skipGlobalErrorToast: true,
-      });
-
-      const blob = new Blob([res.data], { type: "application/pdf" });
+      const blob = await buildPdfFromPreview(previewContainerId, "downloadPdf");
       const fileRevision = report.reportRevisionNumber || revision || "latest";
       const fileName = `report-${veriportReportId}-rev-${fileRevision}.pdf`;
 
@@ -165,18 +266,77 @@ const AdminReportDetailPage = () => {
       document.body.removeChild(anchor);
       window.URL.revokeObjectURL(fileUrl);
     } catch (error) {
+      const info = extractErrorInfo(error);
       console.error("[AdminReportDetail] Download PDF failed", {
-        endpoint: `/veriport/reports/${veriportReportId}/pdf`,
-        status: error?.response?.status,
-        message: error?.response?.data?.message || error?.message,
+        mode: "local-preview-generation",
+        ...info,
       });
       handleApiError(error, {
-        notFoundMessage: "PDF not available yet",
-        defaultMessage: "Download failed. Please retry.",
+        defaultMessage: info.message || "Failed to generate PDF. Please retry.",
       });
     } finally {
       await ensureMinDuration(startedAt, 300);
       setDownloading(false);
+    }
+  };
+
+  const handleGenerateAndUploadPdf = async () => {
+    if (!report || generatingPdf) return;
+
+    const startedAt = Date.now();
+    setGeneratingPdf(true);
+    try {
+      const previewContainerId = `admin-veriport-preview-${veriportReportId}`;
+      const blob = await buildPdfFromPreview(previewContainerId, "uploadPdf");
+
+      const magic = await peekPdfMagic(blob);
+      const uploadUrl = `/veriport/reports/${veriportReportId}/pdf`;
+      // Backend: raw application/pdf (see dfc-backend veriportRoutes pdfBodyMiddleware).
+      console.info("[AdminReportDetail] POST upload PDF — about to send", {
+        uploadUrl,
+        fullUrlHint: `${typeof window !== "undefined" ? window.location.origin : ""} → ${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"}${uploadUrl}`,
+        params: queryParams || {},
+        contentType: "application/pdf",
+        blobBytes: blob.size,
+        pdfMagic: magic,
+        clientDefaultAxiosTimeoutMs: 10000,
+        thisRequestTimeoutMs: PDF_UPLOAD_TIMEOUT_MS,
+      });
+
+      const postStarted = performance.now();
+      const response = await axios.post(uploadUrl, blob, {
+        params: queryParams,
+        headers: { "Content-Type": "application/pdf" },
+        timeout: PDF_UPLOAD_TIMEOUT_MS,
+        skipGlobalErrorToast: true,
+      });
+      const postMs = Math.round(performance.now() - postStarted);
+      console.info("[AdminReportDetail] POST upload PDF — success", {
+        status: response.status,
+        postMs,
+        responseData: response.data,
+      });
+
+      toast.success("PDF generated and uploaded successfully.");
+      await fetchReport();
+    } catch (error) {
+      const info = extractErrorInfo(error);
+      console.error("[AdminReportDetail] Upload PDF failed (full detail)", {
+        endpoint: `/veriport/reports/${veriportReportId}/pdf`,
+        ...info,
+        note: info.isTimeout
+          ? "Likely axios timeout (default was 10s). This request uses 120s — if still timing out, check network/proxy or server."
+          : info.status === 400 && String(info.message).includes("PDF")
+          ? "Server rejected body: not valid PDF or wrong Content-Type."
+          : null,
+      });
+      handleApiError(error, {
+        defaultMessage:
+          info.message || "Failed to generate and upload PDF. Please retry.",
+      });
+    } finally {
+      await ensureMinDuration(startedAt, 500);
+      setGeneratingPdf(false);
     }
   };
 
@@ -276,10 +436,19 @@ const AdminReportDetailPage = () => {
               </div>
 
               <div className="flex flex-wrap gap-3">
+                {!isPdfOperationallyReady && (
+                  <LoadingButton
+                    onClick={handleGenerateAndUploadPdf}
+                    loading={generatingPdf}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Generate & Upload PDF
+                  </LoadingButton>
+                )}
                 <LoadingButton
                   onClick={handleDownloadPdf}
                   loading={downloading}
-                  disabled={!isPdfOperationallyReady}
+                  disabled={!isPdfOperationallyReady || generatingPdf}
                   className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Download PDF
@@ -287,7 +456,7 @@ const AdminReportDetailPage = () => {
                 <LoadingButton
                   onClick={handleManualResend}
                   loading={resending}
-                  disabled={!isPdfOperationallyReady}
+                  disabled={!isPdfOperationallyReady || generatingPdf}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Resend Email PDF
@@ -295,26 +464,48 @@ const AdminReportDetailPage = () => {
               </div>
 
               {!isPdfOperationallyReady && (
-                <p className="text-sm text-yellow-300">PDF not available yet</p>
+                <p className="text-sm text-yellow-300">
+                  PDF not available yet. Preview is hidden until a PDF exists on the server; use
+                  Generate &amp; Upload to build one from this report (template is rendered off-screen for
+                  capture).
+                </p>
               )}
 
-              <div className="pt-3">
-                <h2 className="text-lg font-semibold text-white mb-3">PDF Preview</h2>
-                <div className="w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 p-3">
-                  <div className="mx-auto w-[794px] max-w-none">
-                    <PrintableMroReport
-                      report={report}
-                      issuedAt={formatDate(report.receivedAt, {
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                      })}
-                      compact
-                      containerId={`admin-veriport-preview-${veriportReportId}`}
-                    />
+              {isPdfOperationallyReady ? (
+                <div className="pt-3">
+                  <h2 className="text-lg font-semibold text-white mb-3">PDF Preview</h2>
+                  <div className="w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 p-3">
+                    <div className="mx-auto w-[794px] max-w-none">
+                      <PrintableMroReport
+                        report={report}
+                        issuedAt={formatDate(report.receivedAt, {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                        })}
+                        compact
+                        containerId={`admin-veriport-preview-${veriportReportId}`}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div
+                  className="pointer-events-none fixed left-[-10000px] top-0 z-0 w-[794px] overflow-visible"
+                  aria-hidden
+                >
+                  <PrintableMroReport
+                    report={report}
+                    issuedAt={formatDate(report.receivedAt, {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                    })}
+                    compact
+                    containerId={`admin-veriport-preview-${veriportReportId}`}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
